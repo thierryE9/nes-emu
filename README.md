@@ -1,1 +1,1 @@
-# gb-emu
+# nes-emu
