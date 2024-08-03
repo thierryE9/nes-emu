@@ -1,3 +1,7 @@
 D:\projects\nes-emu\Bus.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\Bus.obj
+D:\projects\nes-emu\Cartridge.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\Cartridge.obj
+D:\projects\nes-emu\Mapper.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\Mapper.obj
+D:\projects\nes-emu\Mapper_000.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\Mapper_000.obj
+D:\projects\nes-emu\olc2C02.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\olc2C02.obj
 D:\projects\nes-emu\olc6502.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\olc6502.obj
 D:\projects\nes-emu\olcNes_Video1_6502.cpp;D:\projects\nes-emu\nes-emu\x64\Debug\olcNes_Video1_6502.obj

@@ -22,7 +22,7 @@ public:
     uint8_t cpuRead(uint16_t addr, bool bReadOnly = false);
 
 public:
-    void insertCardtridge(const std::shared_ptr<Cartridge>& cartridge);
+    void insertCartridge(const std::shared_ptr<Cartridge>& cartridge);
     void reset();
     void clock();
 

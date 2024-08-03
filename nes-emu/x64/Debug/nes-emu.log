@@ -1,1 +1,5 @@
-﻿  nes-emu.vcxproj -> D:\projects\nes-emu\x64\Debug\nes-emu.exe
+﻿  Bus.cpp
+  olc6502.cpp
+  olcNes_Video1_6502.cpp
+  Generating Code...
+  nes-emu.vcxproj -> D:\projects\nes-emu\x64\Debug\nes-emu.exe
