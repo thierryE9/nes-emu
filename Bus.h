@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <array>
 #include "olc6502.h"
+#include "olc2C02.h"
+#include "Cartridge.h"
 
 class Bus {
 public:
@@ -10,9 +12,20 @@ public:
 
 public:
     olc6502 cpu;
-    std::array<uint8_t, 64 * 1024> ram;
+    olc2C02 ppu;
+    std::array<uint8_t, 2 * 1024> cpuRam;
+
+    std::shared_ptr<Cartridge> cart;
 
 public:
-    void write(uint16_t addr, uint8_t data);
-    uint8_t read(uint16_t addr, bool bReadOnly = false);
+    void cpuWrite(uint16_t addr, uint8_t data);
+    uint8_t cpuRead(uint16_t addr, bool bReadOnly = false);
+
+public:
+    void insertCardtridge(const std::shared_ptr<Cartridge>& cartridge);
+    void reset();
+    void clock();
+
+private:
+    uint32_t nSystemClockCounter = 0;
 };

@@ -1,4 +1,5 @@
 #include "olc6502.h"
+#include "Bus.h"
 
 olc6502::olc6502() {
 	using a = olc6502;
@@ -27,11 +28,11 @@ olc6502::~olc6502() {
 }
 
 uint8_t olc6502::read(uint16_t a) {
-	return bus->read(a, false);
+	return bus->cpuRead(a, false);
 }
 
 void olc6502::write(uint16_t a, uint8_t d) {
-	bus->write(a, d);
+	bus->cpuWrite(a, d);
 }
 
 void olc6502::clock() {
@@ -46,6 +47,10 @@ void olc6502::clock() {
 		cycles += (additional_cycle1 & additional_cycle2);
 	}
 	cycles--;
+}
+
+uint8_t olc6502::GetFlag(FLAGS6502 f) {
+	return ((status & f) > 0) ? 1 : 0;
 }
 
 void olc6502::SetFlag(FLAGS6502 f, bool v) {
@@ -1095,11 +1100,6 @@ void olc6502::nmi() {
 
 ///////////////////////////////////////////////////////////////////////////////
 // HELPER FUNCTIONS
-
-bool olc6502::complete()
-{
-	return cycles == 0;
-}
 
 // This is the disassembly function. Its workings are not required for emulation.
 // It is merely a convenience function to turn the binary instruction code into
