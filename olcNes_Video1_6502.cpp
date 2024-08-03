@@ -68,7 +68,7 @@
 
 	Author
 	~~~~~~
-	David Barr, aka javidx9, Â©OneLoneCoder 2019
+	David Barr, aka javidx9, ©OneLoneCoder 2019
 */
 
 #include <iostream>
@@ -117,20 +117,20 @@ public:
 	void DrawCpu(int x, int y)
 	{
 		std::string status = "STATUS: ";
-		DrawString(x , y , "STATUS:", olc::WHITE);
-		DrawString(x  + 64, y, "N", nes.cpu.status & olc6502::N ? olc::GREEN : olc::RED);
-		DrawString(x  + 80, y , "V", nes.cpu.status & olc6502::V ? olc::GREEN : olc::RED);
-		DrawString(x  + 96, y , "-", nes.cpu.status & olc6502::U ? olc::GREEN : olc::RED);
-		DrawString(x  + 112, y , "B", nes.cpu.status & olc6502::B ? olc::GREEN : olc::RED);
-		DrawString(x  + 128, y , "D", nes.cpu.status & olc6502::D ? olc::GREEN : olc::RED);
-		DrawString(x  + 144, y , "I", nes.cpu.status & olc6502::I ? olc::GREEN : olc::RED);
-		DrawString(x  + 160, y , "Z", nes.cpu.status & olc6502::Z ? olc::GREEN : olc::RED);
-		DrawString(x  + 178, y , "C", nes.cpu.status & olc6502::C ? olc::GREEN : olc::RED);
-		DrawString(x , y + 10, "PC: $" + hex(nes.cpu.pc, 4));
-		DrawString(x , y + 20, "A: $" +  hex(nes.cpu.a, 2) + "  [" + std::to_string(nes.cpu.a) + "]");
-		DrawString(x , y + 30, "X: $" +  hex(nes.cpu.x, 2) + "  [" + std::to_string(nes.cpu.x) + "]");
-		DrawString(x , y + 40, "Y: $" +  hex(nes.cpu.y, 2) + "  [" + std::to_string(nes.cpu.y) + "]");
-		DrawString(x , y + 50, "Stack P: $" + hex(nes.cpu.stkp, 4));
+		DrawString(x, y, "STATUS:", olc::WHITE);
+		DrawString(x + 64, y, "N", nes.cpu.status & olc6502::N ? olc::GREEN : olc::RED);
+		DrawString(x + 80, y, "V", nes.cpu.status & olc6502::V ? olc::GREEN : olc::RED);
+		DrawString(x + 96, y, "-", nes.cpu.status & olc6502::U ? olc::GREEN : olc::RED);
+		DrawString(x + 112, y, "B", nes.cpu.status & olc6502::B ? olc::GREEN : olc::RED);
+		DrawString(x + 128, y, "D", nes.cpu.status & olc6502::D ? olc::GREEN : olc::RED);
+		DrawString(x + 144, y, "I", nes.cpu.status & olc6502::I ? olc::GREEN : olc::RED);
+		DrawString(x + 160, y, "Z", nes.cpu.status & olc6502::Z ? olc::GREEN : olc::RED);
+		DrawString(x + 178, y, "C", nes.cpu.status & olc6502::C ? olc::GREEN : olc::RED);
+		DrawString(x, y + 10, "PC: $" + hex(nes.cpu.pc, 4));
+		DrawString(x, y + 20, "A: $" + hex(nes.cpu.a, 2) + "  [" + std::to_string(nes.cpu.a) + "]");
+		DrawString(x, y + 30, "X: $" + hex(nes.cpu.x, 2) + "  [" + std::to_string(nes.cpu.x) + "]");
+		DrawString(x, y + 40, "Y: $" + hex(nes.cpu.y, 2) + "  [" + std::to_string(nes.cpu.y) + "]");
+		DrawString(x, y + 50, "Stack P: $" + hex(nes.cpu.stkp, 4));
 	}
 
 	void DrawCode(int x, int y, int nLines)
@@ -186,7 +186,7 @@ public:
 			NOP
 			NOP
 		*/
-		
+
 		// Convert hex string into bytes for RAM
 		std::stringstream ss;
 		ss << "A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA";
@@ -203,7 +203,7 @@ public:
 		nes.ram[0xFFFD] = 0x80;
 
 		// Dont forget to set IRQ and NMI vectors if you want to play with those
-				
+
 		// Extract dissassembly
 		mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
 
@@ -222,8 +222,7 @@ public:
 			do
 			{
 				nes.cpu.clock();
-			} 
-			while (!nes.cpu.complete());
+			} while (!nes.cpu.complete());
 		}
 
 		if (GetKey(olc::Key::R).bPressed)
