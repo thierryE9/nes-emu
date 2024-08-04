@@ -171,7 +171,38 @@ olc::Sprite& olc2C02::GetNameTable(uint8_t i)
 	return *sprNameTable[i];
 }
 
-olc::Sprite& olc2C02::GetPatternTable(uint8_t i)
+olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
 {
+	for (uint16_t nTileY = 0; nTileY < 16; nTileY++) {
+		for (uint16_t nTileX = 0; nTileX < 16; nTileX++) {
+			// get place in memory
+			uint16_t nOffset = nTileY * 256 + nTileX * 16; 
+			for (uint16_t row = 0; row < 8; row++) {
+				// msb tile os offset from lsb tile by 8 bytes
+				uint8_t tile_lsb = ppuRead(i * 0x1000 + nOffset + row);
+				uint8_t tile_msb = ppuRead(i * 0x1000 + nOffset + row + 8);
+				for (uint16_t col = 0; col < 8; col++) {
+					// get pixel value
+					uint8_t pixel = (tile_lsb & 0x01) + (tile_msb & 0x01);
+					tile_lsb >>= 1;
+					tile_msb >>= 1;
+					sprPatternTable[i]->SetPixel
+					(
+						// right to left
+						nTileX * 8 + (7 - col),
+						nTileY * 8 + row,
+						GetColoutFromPaletteRam(palette, pixel);
+						)
+					
+				}
+			}
+		}
+	}
 	return *sprPatternTable[i];
+}
+
+olc::Pixel& olc2C02::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel)
+{
+	// 4xpalette + pixel value offset by 0x3F00 (chr location)
+	return palScreen[ppuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
 }
