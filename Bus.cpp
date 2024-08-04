@@ -24,7 +24,7 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 
 uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
     uint8_t data = 0x00;
-    if (cart->cpuWrite(addr, data)) {
+    if (cart->cpuRead(addr, data)) {
         // give cart bus priority
     }
     if (addr >= 0x0000 && addr <= 0x1FFF) //8kb
