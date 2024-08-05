@@ -110,8 +110,10 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data) {
 	switch (addr)
 	{
 	case 0x0000: // Control
+		control.reg = data;
 		break;
 	case 0x0001: // Mask
+		mask.reg = data;
 		break;
 	case 0x0002: // Status
 		break;
@@ -133,10 +135,51 @@ uint8_t olc2C02::ppuRead(uint16_t addr, bool rdonly) {
 	uint8_t data = 0x00;
 	addr &= 0x3FFF;
 
+	if (cart->ppuRead(addr, data)) {
+
+	}
+	// pattern memory
+	else if (addr >= 0x0000 && addr <= 0x1FFF) {
+		data = tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF];
+	}
+	// nametable memory
+	else if (addr >= 0x2000 && addr <= 0x3EFF) {
+
+	}
+	// palette memory
+	else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+		addr &= 0x001F;
+		if (addr == 0x0010) addr = 0x0000;
+		if (addr == 0x0014) addr = 0x0004;
+		if (addr == 0x0018) addr = 0x0008;
+		if (addr == 0x001C) addr = 0x000C;
+		data = tblPalette[addr];
+	}
+
 	return data;
 }
 void olc2C02::ppuWrite(uint16_t addr, uint8_t data) {
 	addr &= 0x3FFF;
+	if (cart->ppuWrite(addr, data)) {
+
+	}
+	// pattern memory
+	else if (addr >= 0x0000 && addr <= 0x1FFF) {
+		tblPattern[(addr & 0x1000) >> 12][addr & 0x0FFF] = data;
+	}
+	// nametable memory
+	else if (addr >= 0x2000 && addr <= 0x3EFF) {
+
+	}
+	// palette memory
+	else if (addr >= 0x3F00 && addr <= 0x3FFF) {
+		addr &= 0x001F;
+		if (addr == 0x0010) addr = 0x0000;
+		if (addr == 0x0014) addr = 0x0004;
+		if (addr == 0x0018) addr = 0x0008;
+		if (addr == 0x001C) addr = 0x000C;
+		tblPalette[addr] = data;
+	}
 
 }
 
@@ -191,8 +234,8 @@ olc::Sprite& olc2C02::GetPatternTable(uint8_t i, uint8_t palette)
 						// right to left
 						nTileX * 8 + (7 - col),
 						nTileY * 8 + row,
-						GetColoutFromPaletteRam(palette, pixel);
-						)
+						GetColourFromPaletteRam(palette, pixel)
+					);
 					
 				}
 			}
