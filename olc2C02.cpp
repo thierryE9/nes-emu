@@ -93,7 +93,6 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly) {
 	case 0x0001: // Mask
 		break;
 	case 0x0002: // Status
-		status.vertical_blank = 1;
 		data = (status.reg & 0xE0) | (ppu_data_buffer & 0x1F);
 		status.vertical_blank = 0;
 		address_latch = 0;
@@ -108,10 +107,10 @@ uint8_t olc2C02::cpuRead(uint16_t addr, bool rdonly) {
 		break;
 	case 0x0007: // PPU Data
 		data = ppu_data_buffer;
-		ppu_data_buffer = ppuRead(ppu_address);
+		ppu_data_buffer = ppuRead(vram_addr.reg);
 
-		if (ppu_address > 0x3F00) data = ppu_data_buffer;
-		ppu_address++;
+		if (vram_addr.reg > 0x3F00) data = ppu_data_buffer;
+		vram_addr.reg += (control.increment_mode ? 32 : 1);
 		break;
 	}
 	return data;
@@ -121,6 +120,8 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data) {
 	{
 	case 0x0000: // Control
 		control.reg = data;
+		tram_addr.nametable_x = control.nametable_x;
+		tram_addr.nametable_y = control.nametable_y;
 		break;
 	case 0x0001: // Mask
 		mask.reg = data;
@@ -132,20 +133,31 @@ void olc2C02::cpuWrite(uint16_t addr, uint8_t data) {
 	case 0x0004: // OAM Data
 		break;
 	case 0x0005: // Scroll
-		break;
-	case 0x0006: // PPU Address
 		if (address_latch == 0) {
-			ppu_address = (ppu_address & 0x00FF) | (data << 8);
+			fine_x = data & 0x07;
+			tram_addr.coarse_x = data >> 3;
 			address_latch = 1;
 		}
 		else {
-			ppu_address = (ppu_address & 0xFF00) | data;
+			tram_addr.fine_y = data & 0x07;
+			tram_addr.coarse_y = data >> 3;
+			address_latch = 0;
+		}
+		break;
+	case 0x0006: // PPU Address
+		if (address_latch == 0) {
+			tram_addr.reg = (tram_addr.reg & 0x00FF) | (data << 8);
+			address_latch = 1;
+		}
+		else {
+			tram_addr.reg = (tram_addr.reg & 0xFF00) | data;
+			vram_addr = tram_addr;
 			address_latch = 0;
 		}
 		break;
 	case 0x0007: // PPU Data
-		ppuWrite(ppu_address, data);
-		ppu_address++;
+		ppuWrite(vram_addr.reg, data);
+		vram_addr.reg += (control.increment_mode ? 32 : 1);
 		break;
 	}
 }
@@ -259,10 +271,229 @@ void olc2C02::ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 
 void olc2C02::clock()
 {
+	// As we progress through scanlines and cycles, the PPU is effectively
+	// a state machine going through the motions of fetching background 
+	// information and sprite information, compositing them into a pixel
+	// to be output.
 
-	if (scanline == -1 && cycle == 1) {
-		status.vertical_blank = 0;
+	// The lambda functions (functions inside functions) contain the various
+	// actions to be performed depending upon the output of the state machine
+	// for a given scanline/cycle combination
+
+	// ==============================================================================
+	// Increment the background tile "pointer" one tile/column horizontally
+	auto IncrementScrollX = [&]()
+		{
+			// Note: pixel perfect scrolling horizontally is handled by the 
+			// data shifters. Here we are operating in the spatial domain of 
+			// tiles, 8x8 pixel blocks.
+
+			// Ony if rendering is enabled
+			if (mask.render_background || mask.render_sprites)
+			{
+				// A single name table is 32x30 tiles. As we increment horizontally
+				// we may cross into a neighbouring nametable, or wrap around to
+				// a neighbouring nametable
+				if (vram_addr.coarse_x == 31)
+				{
+					// Leaving nametable so wrap address round
+					vram_addr.coarse_x = 0;
+					// Flip target nametable bit
+					vram_addr.nametable_x = ~vram_addr.nametable_x;
+				}
+				else
+				{
+					// Staying in current nametable, so just increment
+					vram_addr.coarse_x++;
+				}
+			}
+		};
+
+	// ==============================================================================
+	// Increment the background tile "pointer" one scanline vertically
+	auto IncrementScrollY = [&]()
+		{
+			// Incrementing vertically is more complicated. The visible nametable
+			// is 32x30 tiles, but in memory there is enough room for 32x32 tiles.
+			// The bottom two rows of tiles are in fact not tiles at all, they
+			// contain the "attribute" information for the entire table. This is
+			// information that describes which palettes are used for different 
+			// regions of the nametable.
+
+			// In addition, the NES doesnt scroll vertically in chunks of 8 pixels
+			// i.e. the height of a tile, it can perform fine scrolling by using
+			// the fine_y component of the register. This means an increment in Y
+			// first adjusts the fine offset, but may need to adjust the whole
+			// row offset, since fine_y is a value 0 to 7, and a row is 8 pixels high
+
+			// Ony if rendering is enabled
+			if (mask.render_background || mask.render_sprites)
+			{
+				// If possible, just increment the fine y offset
+				if (vram_addr.fine_y < 7)
+				{
+					vram_addr.fine_y++;
+				}
+				else
+				{
+					// If we have gone beyond the height of a row, we need to
+					// increment the row, potentially wrapping into neighbouring
+					// vertical nametables. Dont forget however, the bottom two rows
+					// do not contain tile information. The coarse y offset is used
+					// to identify which row of the nametable we want, and the fine
+					// y offset is the specific "scanline"
+
+					// Reset fine y offset
+					vram_addr.fine_y = 0;
+
+					// Check if we need to swap vertical nametable targets
+					if (vram_addr.coarse_y == 29)
+					{
+						// We do, so reset coarse y offset
+						vram_addr.coarse_y = 0;
+						// And flip the target nametable bit
+						vram_addr.nametable_y = ~vram_addr.nametable_y;
+					}
+					else if (vram_addr.coarse_y == 31)
+					{
+						// In case the pointer is in the attribute memory, we
+						// just wrap around the current nametable
+						vram_addr.coarse_y = 0;
+					}
+					else
+					{
+						// None of the above boundary/wrapping conditions apply
+						// so just increment the coarse y offset
+						vram_addr.coarse_y++;
+					}
+				}
+			}
+		};
+
+	// ==============================================================================
+	// Transfer the temporarily stored horizontal nametable access information
+	// into the "pointer". Note that fine x scrolling is not part of the "pointer"
+	// addressing mechanism
+	auto TransferAddressX = [&]()
+		{
+			// Ony if rendering is enabled
+			if (mask.render_background || mask.render_sprites)
+			{
+				vram_addr.nametable_x = tram_addr.nametable_x;
+				vram_addr.coarse_x = tram_addr.coarse_x;
+			}
+		};
+
+	// ==============================================================================
+	// Transfer the temporarily stored vertical nametable access information
+	// into the "pointer". Note that fine y scrolling is part of the "pointer"
+	// addressing mechanism
+	auto TransferAddressY = [&]()
+		{
+			// Ony if rendering is enabled
+			if (mask.render_background || mask.render_sprites)
+			{
+				vram_addr.fine_y = tram_addr.fine_y;
+				vram_addr.nametable_y = tram_addr.nametable_y;
+				vram_addr.coarse_y = tram_addr.coarse_y;
+			}
+		};
+
+
+	// ==============================================================================
+	// Prime the "in-effect" background tile shifters ready for outputting next
+	// 8 pixels in scanline.
+	auto LoadBackgroundShifters = [&]()
+		{
+			// Each PPU update we calculate one pixel. These shifters shift 1 bit along
+			// feeding the pixel compositor with the binary information it needs. Its
+			// 16 bits wide, because the top 8 bits are the current 8 pixels being drawn
+			// and the bottom 8 bits are the next 8 pixels to be drawn. Naturally this means
+			// the required bit is always the MSB of the shifter. However, "fine x" scrolling
+			// plays a part in this too, whcih is seen later, so in fact we can choose
+			// any one of the top 8 bits.
+			bg_shifter_pattern_lo = (bg_shifter_pattern_lo & 0xFF00) | bg_next_tile_lsb;
+			bg_shifter_pattern_hi = (bg_shifter_pattern_hi & 0xFF00) | bg_next_tile_msb;
+
+			// Attribute bits do not change per pixel, rather they change every 8 pixels
+			// but are synchronised with the pattern shifters for convenience, so here
+			// we take the bottom 2 bits of the attribute word which represent which 
+			// palette is being used for the current 8 pixels and the next 8 pixels, and 
+			// "inflate" them to 8 bit words.
+			bg_shifter_attrib_lo = (bg_shifter_attrib_lo & 0xFF00) | ((bg_next_tile_attrib & 0b01) ? 0xFF : 0x00);
+			bg_shifter_attrib_hi = (bg_shifter_attrib_hi & 0xFF00) | ((bg_next_tile_attrib & 0b10) ? 0xFF : 0x00);
+		};
+
+
+	// ==============================================================================
+	// Every cycle the shifters storing pattern and attribute information shift
+	// their contents by 1 bit. This is because every cycle, the output progresses
+	// by 1 pixel. This means relatively, the state of the shifter is in sync
+	// with the pixels being drawn for that 8 pixel section of the scanline.
+	auto UpdateShifters = [&]()
+		{
+			if (mask.render_background)
+			{
+				// Shifting background tile pattern row
+				bg_shifter_pattern_lo <<= 1;
+				bg_shifter_pattern_hi <<= 1;
+
+				// Shifting palette attributes by 1
+				bg_shifter_attrib_lo <<= 1;
+				bg_shifter_attrib_hi <<= 1;
+			}
+		};
+
+	if (scanline >= -1 && scanline < 240) {
+		if (scanline == -1 && cycle == 1) {
+			status.vertical_blank = 0;
+		}
+
+		if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338)) {
+			// get tile id, attr, and pattns
+			switch ((cycle - 1) % 8) {
+			case 0:
+				bg_next_tile_id = ppuRead(0x2000 | (vram_addr.reg & 0x0FFF));
+			case 2:
+				bg_next_tile_attrib = ppuRead(0x23C0 | (vram_addr.nametable_y << 11)
+					| (vram_addr.nametable_x << 10)
+					| ((vram_addr.coarse_y >> 2) << 3)
+					| (vram_addr.coarse_x >> 2));
+				if (vram_addr.coarse_x & 0x02) bg_next_tile_attrib >>= 4;
+				if (vram_addr.coarse_x & 0x02) bg_next_tile_attrib >>= 2;
+				bg_next_tile_attrib &= 0x03;
+			case 4:
+				bg_next_tile_lsb = ppuRead((control.pattern_background << 12)
+					+ ((uint16_t)bg_next_tile_id << 4)
+					+ (vram_addr.fine_y) + 0);
+			case 6:
+				bg_next_tile_msb = ppuRead((control.pattern_background << 12)
+					+ ((uint16_t)bg_next_tile_id << 4)
+					+ (vram_addr.fine_y) + 8);
+			case 7:
+				IncrementScrollX();
+			}
+		}
+
+		if (cycle == 256) {
+			// increment y in loopy reg
+			IncrementScrollY();
+		}
+
+		if (cycle == 257) {
+			TransferAddressX();
+		}
+
+		if (scanline == -1 && cycle >= 280 && cycle < 305) {
+			TransferAddressY();
+		}
+
 	}
+	
+	if (scanline == 240) {
+
+	}
+
 
 	if (scanline == 241 && cycle == 1) {
 		status.vertical_blank = 1;
@@ -270,7 +501,7 @@ void olc2C02::clock()
 			nmi = true;
 	}
 	// noise
-	sprScreen->SetPixel(cycle - 1, scanline, palScreen[(rand() % 2) ? 0x3F : 0x30]);
+	// sprScreen->SetPixel(cycle - 1, scanline, palScreen[(rand() % 2) ? 0x3F : 0x30]);
 
 	cycle++;
 	if (cycle >= 341) {
