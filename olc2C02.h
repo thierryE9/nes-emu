@@ -126,6 +126,10 @@ private:
 	uint8_t bg_next_tile_lsb = 0x00;
 	uint8_t bg_next_tile_msb = 0x00;
 
+	uint16_t bg_shifter_pattern_lo = 0x0000;
+	uint16_t bg_shifter_pattern_hi = 0x0000;
+	uint16_t bg_shifter_attrib_lo = 0x0000;
+	uint16_t bg_shifter_attrib_hi = 0x0000;
 };
 
 

@@ -450,9 +450,11 @@ void olc2C02::clock()
 		}
 
 		if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338)) {
+			UpdateShifters();
 			// get tile id, attr, and pattns
 			switch ((cycle - 1) % 8) {
 			case 0:
+				LoadBackgroundShifters();
 				bg_next_tile_id = ppuRead(0x2000 | (vram_addr.reg & 0x0FFF));
 			case 2:
 				bg_next_tile_attrib = ppuRead(0x23C0 | (vram_addr.nametable_y << 11)
@@ -500,8 +502,26 @@ void olc2C02::clock()
 		if (control.enable_nmi)
 			nmi = true;
 	}
+
+	uint8_t bg_pixel = 0x00;
+	uint8_t bg_palette = 0x00;
+
+	if (mask.render_background) {
+		uint16_t bit_mux = 0x8000 >> fine_x;
+
+		uint8_t p0_pixel = (bg_shifter_pattern_lo & bit_mux) > 0;
+		uint8_t p1_pixel = (bg_shifter_pattern_hi & bit_mux) > 0;
+		bg_pixel = (p1_pixel << 1) | p0_pixel;
+
+		uint8_t bg_pal0 = (bg_shifter_attrib_lo & bit_mux) > 0;
+		uint8_t bg_pal1 = (bg_shifter_attrib_hi & bit_mux) > 0;
+		bg_palette = (bg_pal1 << 1) | bg_pal0;
+	}
+
 	// noise
 	// sprScreen->SetPixel(cycle - 1, scanline, palScreen[(rand() % 2) ? 0x3F : 0x30]);
+
+	sprScreen->SetPixel(cycle - 1, scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
 
 	cycle++;
 	if (cycle >= 341) {
