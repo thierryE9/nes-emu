@@ -38,8 +38,15 @@ bool Mapper_000::ppuMapRead(uint16_t addr, uint32_t& mapped_addr)
 // char rom, no need to write, ppu doesn't care.
 bool Mapper_000::ppuMapWrite(uint16_t addr, uint32_t& mapped_addr)
 {
-	/*if (addr >= 0x0000 && addr <= 0x1FFF) {
-		return true;
-	}*/
+	if (addr >= 0x0000 && addr <= 0x1FFF)
+	{
+		if (nCHRBanks == 0)
+		{
+			// Treat as RAM
+			mapped_addr = addr;
+			return true;
+		}
+	}
+
 	return false;
 }

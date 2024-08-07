@@ -17,6 +17,9 @@ private:
 	uint8_t tblPalette[32];
 	uint8_t tblPattern[2][4096];
 
+private:
+	olc::Pixel  palScreen[0x40];
+
 public:
 	// Main bus
 	uint8_t cpuRead(uint16_t addr, bool rdonly = false);
@@ -34,8 +37,9 @@ public:
 	void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void clock();
 
-private:
-	olc::Pixel  palScreen[0x40];
+	bool nmi = false;
+
+
 	// In Video
 	// olc::Sprite sprScreen = olc::Sprite(256, 240);
 	// olc::Sprite sprNameTable[2] = { olc::Sprite(256, 240), olc::Sprite(256, 240) };
@@ -64,7 +68,7 @@ private:
 			uint8_t unused : 5;
 			uint8_t sprite_overflow : 1;
 			uint8_t sprize_zero_hit : 1;
-			uint8_t vertical_black : 1;
+			uint8_t vertical_blank : 1;
 		};
 		uint8_t reg;
 	} status;
@@ -96,6 +100,11 @@ private:
 		};
 		uint8_t reg;
 	} control;
+
+	// specify writing to low or high byte
+	uint8_t address_latch = 0x00;
+	uint8_t ppu_data_buffer = 0x00;
+	uint16_t ppu_address = 0x0000;
 };
 
 

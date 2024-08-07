@@ -1,4 +1,5 @@
-﻿  olc2C02.cpp
+﻿  Bus.cpp
+  olc2C02.cpp
   olc6502.cpp
   olcNes_Video1_6502.cpp
   Generating Code...

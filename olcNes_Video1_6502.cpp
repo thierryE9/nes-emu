@@ -180,7 +180,9 @@ private:
 	{
 		Clear(olc::DARK_BLUE);
 
-
+		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
+		if (GetKey(olc::Key::R).bPressed) nes.reset();
+		if (GetKey(olc::Key::P).bPressed) (++nSelectedPalette &= 0x07);
 
 		if (bEmulationRun)
 		{
@@ -218,11 +220,6 @@ private:
 			}
 		}
 
-
-		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
-		if (GetKey(olc::Key::R).bPressed) nes.reset();
-
-		if (GetKey(olc::Key::P).bPressed) (++nSelectedPalette &= 0x07);
 
 		DrawCpu(516, 2);
 		DrawCode(516, 72, 26);

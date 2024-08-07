@@ -27,7 +27,7 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
     if (cart->cpuRead(addr, data)) {
         // give cart bus priority
     }
-    if (addr >= 0x0000 && addr <= 0x1FFF) //8kb
+    else if (addr >= 0x0000 && addr <= 0x1FFF) //8kb
         data =  cpuRam[addr & 0x07FF];
     else if (addr >= 0x2000 && addr <= 0x3FFF)
         data = ppu.cpuRead(addr & 0x0007, bReadOnly);
@@ -52,6 +52,12 @@ void Bus::clock()
     if (nSystemClockCounter % 3 == 0) {
         cpu.clock();
     }
+
+    if (ppu.nmi) {
+        ppu.nmi = false;
+        cpu.nmi();
+    }
+
     nSystemClockCounter++;
 }
 
