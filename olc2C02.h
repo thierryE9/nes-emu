@@ -36,7 +36,7 @@ public:
 	//interface
 	void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void clock();
-
+	void reset();
 	bool nmi = false;
 
 
@@ -67,7 +67,7 @@ private:
 		struct {
 			uint8_t unused : 5;
 			uint8_t sprite_overflow : 1;
-			uint8_t sprize_zero_hit : 1;
+			uint8_t sprite_zero_hit : 1;
 			uint8_t vertical_blank : 1;
 		};
 		uint8_t reg;
@@ -130,6 +130,28 @@ private:
 	uint16_t bg_shifter_pattern_hi = 0x0000;
 	uint16_t bg_shifter_attrib_lo = 0x0000;
 	uint16_t bg_shifter_attrib_hi = 0x0000;
+
+	private:
+		struct sObjectAttributeEntry {
+			uint8_t y;
+			uint8_t id;
+			uint8_t attribute;
+			uint8_t x;
+		} OAM[64];
+
+		uint8_t oam_addr = 0x00;
+
+		sObjectAttributeEntry spriteScanline[8];
+		uint8_t sprite_count;
+		uint8_t sprite_shifter_pattern_lo[8];
+		uint8_t sprite_shifter_pattern_hi[8];
+
+		bool bSpriteZeroHitPossible = false;
+		bool bSpriteZeroBeingRendered = false;
+
+	public:
+		uint8_t* pOAM = (uint8_t*)OAM;
+
 };
 
 

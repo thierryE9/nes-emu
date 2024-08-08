@@ -161,7 +161,7 @@ private:
 	bool OnUserCreate()
 	{
 		// Load the cartridge
-		cart = std::make_shared<Cartridge>("roms/donkey kong.nes");
+		cart = std::make_shared<Cartridge>("roms/ice climber.nes");
 		if (!cart->ImageValid())
 			return false;
 
@@ -179,6 +179,16 @@ private:
 	bool OnUserUpdate(float fElapsedTime)
 	{
 		Clear(olc::DARK_BLUE);
+
+		nes.controller[0] = 0x00;
+		nes.controller[0] |= GetKey(olc::Key::X).bHeld ? 0x80 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::Z).bHeld ? 0x40 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::A).bHeld ? 0x20 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::S).bHeld ? 0x10 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::UP).bHeld ? 0x08 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::DOWN).bHeld ? 0x04 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::LEFT).bHeld ? 0x02 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::RIGHT).bHeld ? 0x01 : 0x00;
 
 		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
 		if (GetKey(olc::Key::R).bPressed) nes.reset();
@@ -222,8 +232,16 @@ private:
 
 
 		DrawCpu(516, 2);
-		DrawCode(516, 72, 26);
+		// DrawCode(516, 72, 26);\
 
+		for (int i = 0; i < 26; i++) {
+			std::string s = hex(i, 2) + ": (" + std::to_string(nes.ppu.pOAM[i * 4 + 3])
+				+ ", " + std::to_string(nes.ppu.pOAM[i * 4 + 0]) + ") "
+				+ "ID: " + hex(nes.ppu.pOAM[i * 4 + 1], 2)
+				+ " AT: " + hex(nes.ppu.pOAM[i * 4 + 2], 2);
+			DrawString(516, 72 + i * 10, s);
+		}
+		nes.ppu.pOAM[0];
 		const int nSwatchSize = 6;
 		for (int p = 0; p < 8; p++)
 			for (int s = 0; s < 4; s++)
