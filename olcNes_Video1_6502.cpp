@@ -63,12 +63,15 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 
+#define OLC_PGEX_SOUND
+#include "olcPGEX_sound.h"
 
 
-class Demo_olc2C02 : public olc::PixelGameEngine
+
+class Demo_olcNES : public olc::PixelGameEngine
 {
 public:
-	Demo_olc2C02() { sAppName = "olc2C02 Demonstration"; }
+	Demo_olcNES() { sAppName = "olcNES Sound Demonstration"; }
 
 private:
 	// The NES
@@ -161,7 +164,7 @@ private:
 	bool OnUserCreate()
 	{
 		// Load the cartridge
-		cart = std::make_shared<Cartridge>("roms/ice climber.nes");
+		cart = std::make_shared<Cartridge>("roms/smb.nes");
 		if (!cart->ImageValid())
 			return false;
 
@@ -169,14 +172,76 @@ private:
 		nes.insertCartridge(cart);
 
 		// Extract dissassembly
-		mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
+		// mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
+		pInstance = this;
+		nes.SetSampleFrequency(44100);
+		olc::SOUND::InitialiseAudio(44100, 1, 8, 512);
+		olc::SOUND::SetUserSynthFunction(SoundOut);
 
 		// Reset NES
 		nes.reset();
 		return true;
 	}
 
-	bool OnUserUpdate(float fElapsedTime)
+	static Demo_olcNES* pInstance;
+
+	static float SoundOut(int nChannel, float fGlobalTime, float fTimeStep) {
+		while (!pInstance->nes.clock()) {};
+		return static_cast<float>(pInstance->nes.dAudioSample);
+	}
+
+	bool OnUserDestroy() override {
+		olc::SOUND::DestroyAudio();
+		return true;
+	}
+
+	bool EmulatorUpdateWithAudio(float fElapsedTime) {
+		Clear(olc::DARK_BLUE);
+
+		nes.controller[0] = 0x00;
+		nes.controller[0] |= GetKey(olc::Key::X).bHeld ? 0x80 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::Z).bHeld ? 0x40 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::A).bHeld ? 0x20 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::S).bHeld ? 0x10 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::UP).bHeld ? 0x08 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::DOWN).bHeld ? 0x04 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::LEFT).bHeld ? 0x02 : 0x00;
+		nes.controller[0] |= GetKey(olc::Key::RIGHT).bHeld ? 0x01 : 0x00;
+
+		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
+		if (GetKey(olc::Key::R).bPressed) nes.reset();
+		if (GetKey(olc::Key::P).bPressed) (++nSelectedPalette &= 0x07);
+
+		DrawCpu(516, 2);
+		// DrawCode(516, 72, 26);\
+
+		for (int i = 0; i < 26; i++) {
+			std::string s = hex(i, 2) + ": (" + std::to_string(nes.ppu.pOAM[i * 4 + 3])
+				+ ", " + std::to_string(nes.ppu.pOAM[i * 4 + 0]) + ") "
+				+ "ID: " + hex(nes.ppu.pOAM[i * 4 + 1], 2)
+				+ " AT: " + hex(nes.ppu.pOAM[i * 4 + 2], 2);
+			DrawString(516, 72 + i * 10, s);
+		}
+		const int nSwatchSize = 6;
+		for (int p = 0; p < 8; p++)
+			for (int s = 0; s < 4; s++)
+				FillRect(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340, nSwatchSize, nSwatchSize, nes.ppu.GetColourFromPaletteRam(p, s));
+
+		DrawRect(516 + nSelectedPalette * (nSwatchSize * 5) - 1, 339, (nSwatchSize * 4), nSwatchSize, olc::WHITE);
+
+		DrawSprite(516, 348, &nes.ppu.GetPatternTable(0, nSelectedPalette));
+		DrawSprite(648, 348, &nes.ppu.GetPatternTable(1, nSelectedPalette));
+		DrawSprite(0, 0, &nes.ppu.GetScreen(), 2);
+
+		return true;
+	}
+
+	bool OnUserUpdate(float fElapsedTime) override {
+		EmulatorUpdateWithAudio(fElapsedTime);
+		return true;
+	}
+
+	bool EmulatorUpdateWithoutAudio(float fElapsedTime)
 	{
 		Clear(olc::DARK_BLUE);
 
@@ -257,13 +322,11 @@ private:
 	}
 };
 
-
-
-
+Demo_olcNES* Demo_olcNES::pInstance = nullptr;
 
 int main()
 {
-	Demo_olc2C02 demo;
+	Demo_olcNES demo;
 	demo.Construct(780, 480, 2, 2);
 	demo.Start();
 	return 0;
