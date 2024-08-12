@@ -1,7 +1,7 @@
 ﻿  olcNes_Video1_6502.cpp
   Generating code
-  50 of 2275 functions ( 2.2%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    66 functions had inline decision re-evaluated but remain unchanged
+  5 of 2407 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    4 functions were new in current compilation
+    4 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   nes-emu.vcxproj -> D:\projects\nes-emu\x64\Release\nes-emu.exe
